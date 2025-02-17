@@ -24,7 +24,7 @@ def cal_cons(prod, keys):
     global prod_used
     global initial_prod
 
-    # Variable to check if there at least one active consumer
+    # Variable to check if there is at least one active consumer
     activ_exist = False
 
     # First iterates on all consumers to assign consumption according ratio
@@ -68,10 +68,18 @@ def cal_cons(prod, keys):
         # Call again the function
         cal_cons(initial_prod - prod_used, keys)
 
+    # Compute final ratio for each consumer
+    for part, cons in keys.items():
+        cons.ratio = cons.colcons * 100 / prod
+
 # Start of pogram
+test = Consumer.Consumer('test',0.5,10)
+test.ReadConsumption('Courbe_charge_consommateur.txt')
+
 cal_cons(prod, keys)
 
 # Print consumption from autocollective
 for part, cons in keys.items():
     # printf("Consommation de", part, "est égale à", cons.colcons)
     logger.info("Consommation de %s est égale à %f", part, cons.colcons)
+    logger.info("Ratio de %s est égale à %d%%", part, cons.ratio)
