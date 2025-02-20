@@ -79,7 +79,8 @@ def cal_cons(prod, keys):
     for part, cons in keys.items():
         cons.ratio = cons.col_cons / prod
 
-def cal_cons2(prod, point):
+# Function to calculate repartition keys
+def CalculateRepKey(prod, point):
 
     # Use global variables
     global prod_used
@@ -128,18 +129,17 @@ def cal_cons2(prod, point):
                 cons.key = cons.key / new_sum
 
         # Call again the function
-        cal_cons2(initial_prod - prod_used, point)
+        CalculateRepKey(initial_prod - prod_used, point)
 
     # Compute final ratio for each consumer
     for cons in point.cons_list:
+        # Use floor function to round to lower value.
+        # This ensures that sum of all keys does not exceed 100%
         cons.key = math.floor(cons.auto_consumption*1000 / initial_prod) / 10
 
-
-def CalculateRepKey(prod, cons_list, rep):
+# Function to build repartition
+def BuildRep(prod, cons_list, rep):
     global initial_prod
-
-    # First generate list of initial ratio for all consumers
-    # rep.GenerateRatioList(cons_list)
 
     # Build list of points with producer and consumers values:
     #   [prod_slot1, cons1_slot1, cons2_slot1, ..., consN_slot1]
@@ -149,20 +149,19 @@ def CalculateRepKey(prod, cons_list, rep):
     # Build list of keys using initial ratio
     i = 0
     for prod_slot in prod.point_list:
-        #rep.point_list.append(Repartition.Point(prod_slot.slot, prod_slot.prod))
+        # First add information from production
         rep.AddPointProd(prod_slot.slot, prod_slot.prod)
+        # Then iterate on each consumer to add its information
         for cons in cons_list:
-            rep.AddPoint(i, cons.point_list[i].cons, cons.ratio)
-            # rep.AddPointCons(i, cons.point_list[i].cons, cons.ratio)
-            # rep.AddKeyCons(i,cons.ratio)
-
-        initial_prod = rep.point_list[i].prod
-        cal_cons2(initial_prod, rep.point_list[i])
-
+            # In case production is 0, force consumer information to 0
+            # Otherwise add consumers information and calculate repartition keys
+            if prod_slot.prod == 0:
+                rep.AddPoint(i, 0, 0)
+            else:
+                rep.AddPoint(i, cons.point_list[i].cons, cons.ratio)
+                initial_prod = rep.point_list[i].prod
+                CalculateRepKey(initial_prod, rep.point_list[i])
         i += 1
-
-
-
 
 ###################### Start of program ######################
 
@@ -184,7 +183,7 @@ cons_list[2].ReadConsumption('Courbe_charge_consommateur3.txt')
 
 # Calculate repartition keys
 rep = Repartition.Repartition('Novembre')
-CalculateRepKey(prod_list[0],cons_list, rep)
+BuildRep(prod_list[0],cons_list, rep)
 
 # Simple example
 #cal_cons(prod, keys)

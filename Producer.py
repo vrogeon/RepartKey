@@ -4,12 +4,6 @@ from calendar import prmonth
 
 class Producer:
 
-    # prm = 0
-    # prod = 0
-
-    # List of points for each slot of 15 min
-    # point_list = []
-
     # Define class point to contain specific value for each point
     class Point:
         # prod = 0
