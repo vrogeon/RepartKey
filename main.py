@@ -108,8 +108,8 @@ def CalculateRepKey(prod, point):
                 prod_used += prod * cons.key
                 activ_exist = True
 
-            logger.debug("Consommation est égale à %f", cons.auto_consumption)
-            logger.debug("Production utilisée: %f", prod_used)
+            # logger.debug("Consommation est égale à %f", cons.auto_consumption)
+            # logger.debug("Production utilisée: %f", prod_used)
 
     # If not all the production is used, and at least one consumer still active:
     # compute new ratios
@@ -141,7 +141,10 @@ def CalculateRepKey(prod, point):
 def BuildRep(prod, cons_list, rep):
     global initial_prod
 
-    # Build list of points with producer and consumers values:
+    # First get list of prm
+    rep.AddPrm(cons_list)
+
+    # Build for ach time slot the list of points with producer and consumers values:
     #   [prod_slot1, cons1_slot1, cons2_slot1, ..., consN_slot1]
     #   [prod_slot2, cons1_slot2, cons2_slot2, ..., consN_slot2]
     #   ...
@@ -156,11 +159,14 @@ def BuildRep(prod, cons_list, rep):
             # In case production is 0, force consumer information to 0
             # Otherwise add consumers information and calculate repartition keys
             if prod_slot.prod == 0:
-                rep.AddPoint(i, 0, 0)
+                rep.AddPointCons(i, 0, 0)
             else:
-                rep.AddPoint(i, cons.point_list[i].cons, cons.ratio)
-                initial_prod = rep.point_list[i].prod
-                CalculateRepKey(initial_prod, rep.point_list[i])
+                rep.AddPointCons(i, cons.point_list[i].cons, cons.ratio)
+
+        # Compute repartinio key only if production is not null
+        if prod_slot.prod != 0:
+            initial_prod = prod_slot.prod
+            CalculateRepKey(initial_prod, rep.point_list[i])
         i += 1
 
 ###################### Start of program ######################
@@ -185,11 +191,12 @@ cons_list[2].ReadConsumption('Courbe_charge_consommateur3.txt')
 rep = Repartition.Repartition('Novembre')
 BuildRep(prod_list[0],cons_list, rep)
 
+rep.WriteRepartitionKey('01112024_30_11_2024.txt')
 # Simple example
 #cal_cons(prod, keys)
 
 # Print consumption from autocollective
-for part, cons in keys.items():
-    # printf("Consommation de", part, "est égale à", cons.col_cons)
-    logger.info("Consommation de %s est égale à %f", part, cons.col_cons)
-    logger.info("Ratio de %s est égale à %d%%", part, cons.ratio * 100)
+# for part, cons in keys.items():
+#     # printf("Consommation de", part, "est égale à", cons.col_cons)
+#     logger.info("Consommation de %s est égale à %f", part, cons.col_cons)
+#     logger.info("Ratio de %s est égale à %d%%", part, cons.ratio * 100)

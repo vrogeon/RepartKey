@@ -3,11 +3,6 @@ import csv
 
 class Consumer:
 
-    prm = 0
-    cons = 0
-    col_cons = 0
-    ratio = 0
-
     # List of points for each slot of 15 min
     point_list = []
 
@@ -24,6 +19,7 @@ class Consumer:
 
     def __init__(self, name, prm, ratio, cons):
         self.name = name
+        # Point Reference Mesure
         self.prm = prm
         self.ratio = ratio
         self.cons = cons # Consumption

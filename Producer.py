@@ -14,8 +14,9 @@ class Producer:
             
     def __init__(self, name, prm, prod):
         self.name = name
+        # Point Reference Mesure
         self.prm = prm
-        self.prod = prod # Production
+        self.prod = prod
         self.point_list = []
 
     # This function reads a file to set production values
