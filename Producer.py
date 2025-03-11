@@ -6,7 +6,6 @@ class Producer:
 
     # Define class point to contain specific value for each point
     class Point:
-        # prod = 0
 
         def __init__(self, slot, prod):
             self.slot = slot

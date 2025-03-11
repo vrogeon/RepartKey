@@ -3,18 +3,12 @@ import csv
 
 class Consumer:
 
-    # List of points for each slot of 15 min
-    point_list = []
-
     # Define class point to contain specific value for each point
     class Point:
-        cons = 0
-        # Consumption from autocollective producer
-        col_cons = 0
-        ratio = 0
 
         def __init__(self, slot, cons):
             self.slot = slot
+            # Consumption from autocollective producer
             self.cons = cons
 
     def __init__(self, name, prm, ratio, cons):
@@ -24,6 +18,7 @@ class Consumer:
         self.ratio = ratio
         self.cons = cons # Consumption
         self.active = True
+        # List of points for each slot of 15 min
         self.point_list = []
 
     # This function reads a file to set consumption values
