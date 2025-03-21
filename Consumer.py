@@ -11,10 +11,11 @@ class Consumer:
             # Consumption from autocollective producer
             self.cons = cons
 
-    def __init__(self, name, prm, ratio, cons):
+    def __init__(self, name, prm, priority, ratio, cons):
         self.name = name
         # Point Reference Mesure
         self.prm = prm
+        self.priority = priority
         self.ratio = ratio
         self.cons = cons # Consumption
         self.active = True

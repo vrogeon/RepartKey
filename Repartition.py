@@ -14,11 +14,12 @@ class Repartition:
 
         # Class describing repartition key for all consumer for a specific slot
         class ConsRepart:
-            def __init__(self, consumption, ratio):
+            def __init__(self, consumption, priority, ratio):
                 self.active = True
                 self.consumption = consumption
                 # Consumption from autocollect
                 self.auto_consumption = 0
+                self.priority = priority
                 # key represents initial ratio defined, and also intermediate ration computed
                 self.key = ratio
 
@@ -47,19 +48,27 @@ class Repartition:
         self.point_list.append(Repartition.Point(slot, prod))
 
     # This function adds consumption value to the point list
-    def AddPointCons(self, index, cons, ratio):
-        self.point_list[index].cons_list.append(Repartition.Point.ConsRepart(cons, ratio))
+    def AddPointCons(self, index, cons, priority, ratio):
+        self.point_list[index].cons_list.append(Repartition.Point.ConsRepart(cons, priority, ratio))
 
     # Function to calculate repartition keys
-    def CalculateRepKey(self, prod, point):
+    def CalculateRepKey(self, priority, prod, point):
+
+        # self.count += 1
+        # print('count = ', self.count)
 
         # Variable to check if there is at least one active consumer
         activ_exist = False
 
+        # Variable to check if there is at least one consumer with current priority
+        priority_exist = False
+
         # First iterates on all consumers to assign consumption according the ratio
         for cons in point.cons_list:
-            # Manage only active consumers
-            if cons.active:
+            # Manage only active consumers and matching current priority
+            if cons.active and cons.priority == priority:
+                priority_exist = True
+
                 # Check if consumption from autocollect is going to exceed consumption
                 if cons.consumption < (cons.auto_consumption + prod * cons.key):
                     # If this is the case, first de-activate the consumer
@@ -82,21 +91,27 @@ class Repartition:
         # compute new ratios
         # and recursively call this function
         if ((self.prod_used < self.initial_prod)
-                and activ_exist):
+                and activ_exist and priority_exist):
             # Sum ratio of all active consumers
             new_sum = 0
             for cons in point.cons_list:
-                if cons.active:
+                if cons.active and cons.priority == priority:
                     new_sum += cons.key
 
             # Compute new ratios
             for cons in point.cons_list:
                 # Manage only active consumers
-                if cons.active:
+                if cons.active and cons.priority == priority:
                     cons.key = cons.key / new_sum
 
             # Call again the function
-            self.CalculateRepKey(self, self.initial_prod - self.prod_used, point)
+            self.CalculateRepKey(priority, self.initial_prod - self.prod_used, point)
+
+        if priority_exist:
+            # increase priority and reset flag
+            priority += 1
+            # Call again the function
+            self.CalculateRepKey(priority, self.initial_prod - self.prod_used, point)
 
         # Compute final ratio for each consumer
         for cons in point.cons_list:
@@ -125,17 +140,19 @@ class Repartition:
                 # In case production is 0, force consumer information to 0
                 # Otherwise add consumers information and calculate repartition keys
                 if prod_slot.prod == 0:
-                    self.AddPointCons(i, 0, 0)
+                    self.AddPointCons(i, 0, 0, 0)
                 else:
-                    self.AddPointCons(i, cons.point_list[i].cons, cons.ratio)
+                    self.AddPointCons(i, cons.point_list[i].cons, cons.priority, cons.ratio)
 
-            # Compute repartion key only if production is not null
+            # Compute repartition keys only if production is not null
             if prod_slot.prod != 0:
                 self.initial_prod = prod_slot.prod
-                self.CalculateRepKey(self.initial_prod, self.point_list[i])
+                self.prod_used = 0
+                self.count = 0
+                self.CalculateRepKey(1, self.initial_prod, self.point_list[i])
             i += 1
 
-    # This function crate file for repartition keys
+    # This function create file for repartition keys
     def WriteRepartitionKey(self,file):
         with open(file, 'w', newline='') as csvfile:
             keywriter = csv.writer(csvfile,delimiter=';')

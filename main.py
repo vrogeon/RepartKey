@@ -20,10 +20,10 @@ initial_prod = prod
 # Production used from the autocollect
 prod_used = 0.0
 
-keys = { 'partA': Consumer.Consumer('partA', 12345678900001, 0.5, 10),
-         'partB': Consumer.Consumer('partB', 12345678900002, 0.2, 10),
-         'partC': Consumer.Consumer('partC', 12345678900003, 0.3, 10)
-         }
+# keys = { 'partA': Consumer.Consumer('partA', 12345678900001, 0.5, 10),
+#          'partB': Consumer.Consumer('partB', 12345678900002, 0.2, 10),
+#          'partC': Consumer.Consumer('partC', 12345678900003, 0.3, 10)
+#          }
 
 ###################### Start of program ######################
 
@@ -35,9 +35,9 @@ prod_list[0].ReadProduction('Courbe_charge_producteur1.txt')
 
 # Create list of consumers
 cons_list = []
-cons_list.append(Consumer.Consumer('Cons1',12345678900001, 0.5,10))
-cons_list.append(Consumer.Consumer('Cons2',12345678900002, 0.2,10))
-cons_list.append(Consumer.Consumer('Cons3',12345678900003, 0.3,10))
+cons_list.append(Consumer.Consumer('Cons1',12345678900001, 1, 0.5,10))
+cons_list.append(Consumer.Consumer('Cons2',12345678900002, 0, 0.2,10))
+cons_list.append(Consumer.Consumer('Cons3',12345678900003, 2, 0.3,10))
 
 cons_list[0].ReadConsumption('Courbe_charge_consommateur1.txt')
 cons_list[1].ReadConsumption('Courbe_charge_consommateur2.txt')
