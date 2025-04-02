@@ -7,23 +7,24 @@ class Consumer:
     class Point:
 
         def __init__(self, slot, cons):
+            # Timestamp of the slot
             self.slot = slot
-            # Consumption from autocollective producer
+            # Consumer consumption for the slot
             self.cons = cons
 
-    def __init__(self, name, prm, priority, ratio, cons):
+    def __init__(self, name, prm, priority_list, ratio_list):
         self.name = name
-        # Point Reference Mesure
+        # Point Reference Mesure: uniquely identify the consumer
         self.prm = prm
-        self.priority = priority
-        self.ratio = ratio
-        self.cons = cons # Consumption
-        self.active = True
+        # List of priority of the consumer for each producer
+        self.priority_list = priority_list
+        # List of ratio of the consumer for each producer
+        self.ratio_list = ratio_list
         # List of points for each slot of 15 min
         self.point_list = []
 
     # This function reads a file to set consumption values
-    def ReadConsumption(self, file):
+    def read_consumption(self, file):
         with open(file, newline='') as csvfile:
             next(csvfile) # Skip first line of the file which contains title
             cons_file = csv.reader(csvfile,delimiter=';')
