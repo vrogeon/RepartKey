@@ -5,9 +5,11 @@ import math
 from ast import Param
 from tkinter.constants import ACTIVE
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+import matplotlib.pyplot as plt
+
+# logging.basicConfig(level=logging.DEBUG)
+# logger = logging.getLogger(__name__)
+# logger.setLevel(logging.DEBUG)
 
 
 # The following class describes the different states a consumer can have
@@ -23,6 +25,24 @@ class State:
     # Consumer is not anymore used to compute repartition key for the current time slot
     COMPLETE = 3
 
+
+def plot_trend(dates, values, title=None):
+    """Plot the generated trend"""
+    plt.figure(figsize=(12, 6))
+    plt.plot(dates, values, 'r-')
+
+    if title:
+        plt.title(title)
+    else:
+        plt.title(f"Trend")
+
+    plt.xlabel("Date")
+    plt.ylabel("Value")
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+
+    return plt
+
 class Repartition:
 
     # Class to contain specific information for each point
@@ -30,9 +50,9 @@ class Repartition:
 
         # Class containing producer information to compute repartition keys
         class ProdRepart:
-            def __init__(self, initial_prod):
-                self.initial_prod = initial_prod
-                self.production = initial_prod
+            def __init__(self, initial_production):
+                self.initial_production = initial_production
+                self.production = initial_production
                 self.prod_to_remove = 0
 
         # Class describing repartition keys for all consumers for a specific slot
@@ -223,7 +243,7 @@ class Repartition:
 
                 # Use floor function to round to lower value.
                 # This ensures that sum of all keys does not exceed 100%
-                param.key = math.floor(param.auto_consumption * 1000 / point.prod_list[index_param].initial_prod) / 10
+                param.key = math.floor(param.auto_consumption * 1000 / point.prod_list[index_param].initial_production) / 10
                 index_param += 1
 
     # Function to build repartition
@@ -294,10 +314,14 @@ class Repartition:
                     row_key.append(row.slot)
                     # Then add key for each consumer
                     for cons in row.cons_list:
-                        row_key.append(cons.param_list[index_prod].key)
+                        # Use this line to print float with ',' instead of '.'
+                        row_key.append(str(cons.param_list[index_prod].key).replace('.', ','))
+                        # row_key.append(cons.param_list[index_prod].key)
 
                     # Add check information for excel
-                    line = '=SOMME(SUBSTITUE(B'+str(line_for_debug_info)+';".";",");SUBSTITUE(C'+str(line_for_debug_info)+';".";","))'
+                    line = '=SOMME(SUBSTITUE(B'+str(line_for_debug_info)+';".";",");'\
+                            'SUBSTITUE(C'+str(line_for_debug_info)+';".";",");'\
+                            'SUBSTITUE(D'+str(line_for_debug_info)+';".";","))'
                     row_key.append(line)
                     line = '=SI(E'+str(line_for_debug_info)+'>100;"NOK";"")'
                     row_key.append(line)
@@ -309,3 +333,83 @@ class Repartition:
 
                 index_prod += 1
 
+
+    # This function create files for repartition keys
+    def generate_graph(self, prod_list, cons_list):
+        index_prod = 0
+        for prod in prod_list:
+            file = str(prod.prm) + '_graph.csv'
+            with open(file, 'w', newline='') as csvfile:
+                keywriter = csv.writer(csvfile,delimiter=';')
+
+                # Add first line with name of consumers
+                first_line = []
+                first_line.append('Horodate')
+                first_line.append(prod.name + '_production')
+                for cons in cons_list:
+                    first_line.append(cons.name + '_cons')
+                    first_line.append(cons.name + '_auto_cons')
+                    first_line.append(cons.name + '_auto_prod rate')
+
+                first_line.append('auto_cons rate')
+
+                keywriter.writerow(first_line)
+
+                # Plot trends
+                plt.figure(figsize=(12, 6))
+
+                plot_slot = []
+                plot_value = []
+
+                # Iterate on each point
+                for row in self.point_list:
+                    # First add information of time slot
+                    row_key = []
+                    row_key.append(row.slot)
+                    row_key.append(str(row.prod_list[index_prod].initial_production).replace('.', ','))
+
+                    plot_slot.append(row.slot)
+
+                    total_auto_consumption = 0
+
+                    # Then add key for each consumer
+                    for cons in row.cons_list:
+                        row_key.append(str(cons.consumption).replace('.', ','))
+                        # Use this line to print float with ',' instead of '.'
+                        auto_cons = row.prod_list[index_prod].initial_production * cons.param_list[index_prod].key
+                        auto_cons = math.floor(auto_cons) / 100
+                        row_key.append(str(auto_cons).replace('.', ','))
+                        # row_key.append(cons.param_list[index_prod].key)
+
+                        # Add auto production rate
+                        if (cons.consumption != 0):
+                            row_key.append(str(int(auto_cons * 100 / cons.consumption)).replace('.', ','))
+                        else:
+                            row_key.append(0)
+
+                        # Multiply by 100 and force to int to prevent having float representation issues
+                        total_auto_consumption += int(round(cons.param_list[index_prod].auto_consumption * 100))
+
+                    # Write auto consumption ratio
+                    if row.prod_list[index_prod].initial_production != 0:
+                        auto_cons_ratio = int(total_auto_consumption  / row.prod_list[index_prod].initial_production)
+                    else:
+                        auto_cons_ratio = 0
+
+                    row_key.append(auto_cons_ratio)
+                    plot_value.append(auto_cons_ratio)
+
+                    keywriter.writerow(row_key)
+
+                    # if "23:45" in row.slot:
+                    #     title = row.slot[:10]
+                    #     plot_trend(plot_slot, plot_value, title)
+                    #     plot_slot = []
+                    #     plot_value = []
+
+                plot_trend(plot_slot, plot_value)
+                print('Repartition key file written !')
+
+                plt.show()
+
+                index_prod += 1
