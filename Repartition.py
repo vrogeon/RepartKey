@@ -286,7 +286,7 @@ class Repartition:
             i += 1
 
     # This function create files for repartition keys
-    def write_repartition_key(self, prod_list):
+    def write_repartition_key(self, prod_list, cons_list):
         index_prod = 0
         for prod in prod_list:
             file = str(prod.prm) + '.csv'
@@ -319,9 +319,14 @@ class Repartition:
                         # row_key.append(cons.param_list[index_prod].key)
 
                     # Add check information for excel
-                    line = '=SOMME(SUBSTITUE(B'+str(line_for_debug_info)+';".";",");'\
-                            'SUBSTITUE(C'+str(line_for_debug_info)+';".";",");'\
-                            'SUBSTITUE(D'+str(line_for_debug_info)+';".";","))'
+                    line = '=SOMME('
+                    excel_column_number = 'A'
+                    excel_column_number = ord(excel_column_number[0])
+                    for cons in cons_list:
+                        excel_column_number += 1
+                        line += 'SUBSTITUE('+chr(excel_column_number)+str(line_for_debug_info)+';".";",");'
+                    line = line[:-1]
+                    line = line + ')'
                     row_key.append(line)
                     line = '=SI(E'+str(line_for_debug_info)+'>100;"NOK";"")'
                     row_key.append(line)
@@ -329,12 +334,12 @@ class Repartition:
 
                     keywriter.writerow(row_key)
 
-                print('Repartition key file written !')
+                print('Repartition key file written')
 
                 index_prod += 1
 
 
-    # This function create files for repartition keys
+    # This function creates file with indicators (auto-consumption and auto-production)
     def generate_graph(self, prod_list, cons_list):
         index_prod = 0
         for prod in prod_list:
@@ -383,9 +388,10 @@ class Repartition:
 
                         # Add auto production rate
                         if (cons.consumption != 0):
-                            row_key.append(str(int(auto_cons * 100 / cons.consumption)).replace('.', ','))
+                            auto_prod_rate = str(int(auto_cons * 100 / cons.consumption)).replace('.', ',')
                         else:
-                            row_key.append(0)
+                            auto_prod_rate = 0
+                        row_key.append(auto_prod_rate)
 
                         # Multiply by 100 and force to int to prevent having float representation issues
                         total_auto_consumption += int(round(cons.param_list[index_prod].auto_consumption * 100))
@@ -397,7 +403,8 @@ class Repartition:
                         auto_cons_ratio = 0
 
                     row_key.append(auto_cons_ratio)
-                    plot_value.append(auto_cons_ratio)
+
+                    # plot_value.append(auto_cons_ratio)
 
                     keywriter.writerow(row_key)
 
@@ -407,9 +414,92 @@ class Repartition:
                     #     plot_slot = []
                     #     plot_value = []
 
-                plot_trend(plot_slot, plot_value)
-                print('Repartition key file written !')
+                # plot_trend(plot_slot, plot_value)
+                print('File for graph generated')
 
-                plt.show()
+                # plt.show()
 
                 index_prod += 1
+
+    # This function get auto_consumption rate for a specific producer
+    # Auto_consumption rate is defined as:
+    # (sum of auto_consumption for all users) / (production of producer)
+    def get_auto_consumption_rate(self, index_producer):
+
+        total_auto_consumption = 0
+        total_production = 0
+        for row in self.point_list:
+
+            # First get all auto_consumption for the specific producer
+            for cons in row.cons_list:
+                total_auto_consumption += cons.param_list[index_producer].auto_consumption
+
+            # Then get sum of production
+            total_production += row.prod_list[index_producer].initial_production
+
+        # Compute auto_consumption rate
+        auto_consumption_rate = int(total_auto_consumption * 10000 / total_production) / 100
+
+        return auto_consumption_rate
+
+    # This function get auto_production rate for a specific consumer
+    # Auto_production rate is defined as:
+    # (sum of auto_consumption) / (sum of consumption)
+    def get_auto_production_rate(self, index_consumer):
+
+        total_auto_consumption = 0
+        total_consumption = 0
+        for row in self.point_list:
+
+            for param in row.cons_list[index_consumer].param_list:
+                total_auto_consumption += param.auto_consumption
+
+            total_consumption += row.cons_list[index_consumer].consumption
+
+        # Compute auto_production rate
+        auto_production_rate = int(total_auto_consumption * 10000 / total_consumption) / 100
+
+        return auto_production_rate
+
+    # This function get global auto_production rate
+    # Auto_production rate is defined as:
+    # (sum of auto_consumption of all consumers) / (sum of consumption of all consumers)
+    def get_global_auto_production_rate(self, cons_list):
+
+        total_auto_consumption = 0
+        total_consumption = 0
+        for row in self.point_list:
+
+            for cons in row.cons_list:
+                for param in cons.param_list:
+                    total_auto_consumption += param.auto_consumption
+
+        for cons in cons_list:
+            for point in cons.point_list:
+                total_consumption += point.cons
+
+        # Compute auto_production rate
+        global_auto_production_rate = int(total_auto_consumption * 10000 / total_consumption) / 100
+
+        return global_auto_production_rate
+
+
+    # This function get coverage rate
+    # Coverage rate is defined as:
+    # (production of producer) / (sum of consumption of consumer)
+    def get_coverage_rate(self, index_producer, cons_list):
+
+        total_production = 0
+        total_consumption = 0
+        for row in self.point_list:
+
+            total_production += row.prod_list[index_producer].initial_production
+
+        for cons in cons_list:
+            for point in cons.point_list:
+                total_consumption += point.cons
+
+        # Compute coverage rate
+        coverage_rate = int(total_production * 10000 / total_consumption) / 100
+
+        return coverage_rate
