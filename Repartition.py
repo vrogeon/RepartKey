@@ -5,7 +5,7 @@ import math
 from ast import Param
 from tkinter.constants import ACTIVE
 
-import matplotlib.pyplot as plt
+from datetime import datetime
 
 # logging.basicConfig(level=logging.DEBUG)
 # logger = logging.getLogger(__name__)
@@ -24,24 +24,6 @@ class State:
     # A consumer is COMPLETE when all its consumption has been filled
     # Consumer is not anymore used to compute repartition key for the current time slot
     COMPLETE = 3
-
-
-def plot_trend(dates, values, title=None):
-    """Plot the generated trend"""
-    plt.figure(figsize=(12, 6))
-    plt.plot(dates, values, 'r-')
-
-    if title:
-        plt.title(title)
-    else:
-        plt.title(f"Trend")
-
-    plt.xlabel("Date")
-    plt.ylabel("Value")
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
-
-    return plt
 
 class Repartition:
 
@@ -111,6 +93,38 @@ class Repartition:
             if cons.state == State.ACTIVE:
                 active = True
         return active
+
+    def calculate_rep_key_dynamic(self, point):
+
+        # First iterate on each consumer to compute global consumption
+        global_consumption = 0
+        for cons in point.cons_list:
+            global_consumption += cons.consumption
+
+        # Then iterate on each production to compute global production
+        global_production = 0
+        for prod in point.prod_list:
+            global_production += prod.production
+
+        # Compute ratio between global_consumption and global production
+        # Limit value to 1 to not exceed the consumption
+        ratio_conso_prod = 0
+        if global_consumption > global_production:
+            ratio_conso_prod = 1
+        else:
+            ratio_conso_prod = global_consumption / global_production
+
+        # Iterate on each consumer to set the key and corresponding auto_consumption
+        for cons in point.cons_list:
+            for param, prod in zip(cons.param_list, point.prod_list):
+                param.key = cons.consumption / global_consumption
+                param.auto_consumption = prod.production * param.key * ratio_conso_prod
+
+        for cons in point.cons_list:
+            for index_param, param in enumerate(cons.param_list):
+                # Use floor function to round to lower value.
+                # This ensures that sum of all keys does not exceed 100%
+                param.key = math.floor(param.auto_consumption * 1000 / point.prod_list[index_param].initial_production) / 10
 
     # Function to calculate repartition keys
     def calculate_rep_key(self, current_priority, point):
@@ -200,14 +214,12 @@ class Repartition:
 
             # Sum ratio of all enabled consumers
             new_sum = []
-            index_prod = 0
-            for prod in point.prod_list:
+            for index_prod, prod in enumerate(point.prod_list):
                 new_sum.append(0)
                 for cons in point.cons_list:
                     if (cons.state == State.ACTIVE and
                         cons.param_list[index_prod].priority == current_priority):
                         new_sum[index_prod] +=  cons.param_list[index_prod].key
-                index_prod += 1
 
             # Compute new ratios
             for cons in point.cons_list:
@@ -236,15 +248,10 @@ class Repartition:
 
         # Compute final ratio for each consumer
         for cons in point.cons_list:
-            index_param = 0
-            for param in cons.param_list:
-                # self.count += 1
-                # print('count = ', self.count)
-
+            for index_param, param in enumerate(cons.param_list):
                 # Use floor function to round to lower value.
                 # This ensures that sum of all keys does not exceed 100%
                 param.key = math.floor(param.auto_consumption * 1000 / point.prod_list[index_param].initial_production) / 10
-                index_param += 1
 
     # Function to build repartition
     def build_rep(self, prod_list, cons_list):
@@ -258,10 +265,7 @@ class Repartition:
         #   ...
         #   [prod_slotX, cons1_slotX, cons2_slotX, ..., consN_slotX]
         # Build list of keys using initial ratio
-        i = 0
-        self.count = 0
-        for prod_slot in prod_list[0].point_list:
-
+        for i,prod_slot in enumerate(prod_list[0].point_list):
             # First add slot
             self.add_point(prod_slot.slot)
 
@@ -281,14 +285,11 @@ class Repartition:
 
             # Compute repartition keys only if production is not null
             if prod_slot.prod != 0:
-            # self.count = 0
-                self.calculate_rep_key(0, self.point_list[i])
-            i += 1
+                self.calculate_rep_key_dynamic(self.point_list[i])
 
     # This function create files for repartition keys
     def write_repartition_key(self, prod_list, cons_list):
-        index_prod = 0
-        for prod in prod_list:
+        for index_prod, prod in enumerate(prod_list):
             file = str(prod.prm) + '.csv'
             with open(file, 'w', newline='') as csvfile:
                 keywriter = csv.writer(csvfile,delimiter=';')
@@ -336,35 +337,50 @@ class Repartition:
 
                 print('Repartition key file written')
 
-                index_prod += 1
+    # This function extract month value
+    def get_month(self, slot):
+        if '.' in slot:
+            date_obj = datetime.strptime(slot[0:5], "%d.%m")
+        elif '//' in slot:
+            date_obj = datetime.strptime(slot, "%d/%m/%Y")
 
+        month = date_obj.month
+        return month
 
-    # This function creates file with indicators (auto-consumption and auto-production)
-    def generate_graph(self, prod_list, cons_list):
-        index_prod = 0
-        for prod in prod_list:
-            file = str(prod.prm) + '_graph.csv'
+    # This function creates file with statistics (auto-consumption and auto-production)
+    def generate_statistics(self, prod_list, cons_list):
+        for index_prod, prod in enumerate(prod_list):
+            file = str(prod.prm) + '_statistics.csv'
             with open(file, 'w', newline='') as csvfile:
                 keywriter = csv.writer(csvfile,delimiter=';')
 
                 # Add first line with name of consumers
                 first_line = []
                 first_line.append('Horodate')
-                first_line.append(prod.name + '_production')
+                first_line.append(prod.name)
                 for cons in cons_list:
-                    first_line.append(cons.name + '_cons')
-                    first_line.append(cons.name + '_auto_cons')
-                    first_line.append(cons.name + '_auto_prod rate')
-
-                first_line.append('auto_cons rate')
-
+                    first_line.append(cons.name)
+                    first_line.append(cons.name)
+                    first_line.append("")
+                    first_line.append("")
+                    first_line.append("")
+                    first_line.append("")
                 keywriter.writerow(first_line)
 
-                # Plot trends
-                plt.figure(figsize=(12, 6))
+                second_line = []
+                second_line.append("")
+                second_line.append("")
+                for cons in cons_list:
+                    second_line.append('cons')
+                    second_line.append('cons_mois')
+                    second_line.append('auto_cons')
+                    second_line.append('auto_cons_mois')
+                    second_line.append('auto_prod rate')
+                    second_line.append('ratio')
 
-                plot_slot = []
-                plot_value = []
+                second_line.append('auto_cons rate')
+
+                keywriter.writerow(second_line)
 
                 # Iterate on each point
                 for row in self.point_list:
@@ -373,17 +389,17 @@ class Repartition:
                     row_key.append(row.slot)
                     row_key.append(str(row.prod_list[index_prod].initial_production).replace('.', ','))
 
-                    plot_slot.append(row.slot)
-
                     total_auto_consumption = 0
 
                     # Then add key for each consumer
                     for cons in row.cons_list:
                         row_key.append(str(cons.consumption).replace('.', ','))
                         # Use this line to print float with ',' instead of '.'
+                        row_key.append("")
                         auto_cons = row.prod_list[index_prod].initial_production * cons.param_list[index_prod].key
                         auto_cons = math.floor(auto_cons) / 100
                         row_key.append(str(auto_cons).replace('.', ','))
+                        row_key.append("")
                         # row_key.append(cons.param_list[index_prod].key)
 
                         # Add auto production rate
@@ -392,6 +408,7 @@ class Repartition:
                         else:
                             auto_prod_rate = 0
                         row_key.append(auto_prod_rate)
+                        row_key.append("")
 
                         # Multiply by 100 and force to int to prevent having float representation issues
                         total_auto_consumption += int(round(cons.param_list[index_prod].auto_consumption * 100))
@@ -404,22 +421,94 @@ class Repartition:
 
                     row_key.append(auto_cons_ratio)
 
-                    # plot_value.append(auto_cons_ratio)
-
                     keywriter.writerow(row_key)
 
-                    # if "23:45" in row.slot:
-                    #     title = row.slot[:10]
-                    #     plot_trend(plot_slot, plot_value, title)
-                    #     plot_slot = []
-                    #     plot_value = []
+                print('File for statistics generated')
 
-                # plot_trend(plot_slot, plot_value)
-                print('File for graph generated')
+    # Function used to generate monthly report
+    def generate_monthly_report(self, prod_list, cons_list):
+        for index_prod, prod in enumerate(prod_list):
+            file = str(prod.prm) + '_monthly_report.csv'
+            with open(file, 'w', newline='') as csvfile:
+                keywriter = csv.writer(csvfile,delimiter=';')
 
-                # plt.show()
+                # Add first line with name of consumers
+                first_line = []
+                first_line.append('Horodate')
+                first_line.append(prod.name)
+                for cons in cons_list:
+                    first_line.append(cons.name)
+                    first_line.append("")
+                    first_line.append("")
+                keywriter.writerow(first_line)
 
-                index_prod += 1
+                second_line = []
+                second_line.append("")
+                second_line.append("")
+                for cons in cons_list:
+                    second_line.append('cons_mois')
+                    second_line.append('ratio')
+                    second_line.append('auto_cons_mois')
+
+                keywriter.writerow(second_line)
+
+                # Get first month
+                current_month = self.get_month(self.point_list[0].slot)
+
+                prod_month = 0
+                cons_month = [0 for i in range(len(self.point_list[0].cons_list))]
+                auto_cons_month = [0 for i in range(len(self.point_list[0].cons_list))]
+                total_auto_consumption = 0
+
+                # Iterate on each point
+                for row_index, row in enumerate(self.point_list):
+
+                    # Check if reaching end of file before getting next month
+                    if (row_index < len(self.point_list)-1):
+                        next_month = self.get_month(self.point_list[row_index+1].slot)
+                    else:
+                        next_month = 13
+
+                    prod_month += row.prod_list[0].initial_production
+
+                    # Then add key for each consumer
+                    for cons_index, cons in enumerate(row.cons_list):
+                        cons_month[cons_index] += cons.consumption
+
+                        auto_cons = row.prod_list[index_prod].initial_production * cons.param_list[index_prod].key
+                        auto_cons = auto_cons / 100
+                        auto_cons_month[cons_index] += auto_cons
+                        total_auto_consumption += auto_cons
+
+                    # If next month is different, write the values for the current month
+                    if next_month != current_month:
+                        # New month => write values for current month
+                        # First add information of time slot
+                        row_key = []
+                        row_key.append(row.slot)
+
+                        row_key.append(str(int(prod_month/1000)).replace('.', ','))
+
+                        for cons_index, cons in enumerate(row.cons_list):
+                            cons_kwh = int(cons_month[cons_index] / 1000)
+                            row_key.append(str(cons_kwh).replace('.', ','))
+
+                            ratio = int(auto_cons_month[cons_index] * 10000 / cons_month[cons_index]) / 100
+                            row_key.append(str(ratio).replace('.', ','))
+
+                            auto_cons_kwh = auto_cons_month[cons_index] / 1000
+                            row_key.append(str(auto_cons_kwh).replace('.', ','))
+
+                        # Reinitialize lists
+                        prod_month = 0
+                        cons_month = [0 for i in range(len(self.point_list[0].cons_list))]
+                        auto_cons_month = [0 for i in range(len(self.point_list[0].cons_list))]
+
+                        keywriter.writerow(row_key)
+
+                        current_month = next_month
+
+                print('Monthly report generated')
 
     # This function get auto_consumption rate for a specific producer
     # Auto_consumption rate is defined as:
@@ -438,7 +527,7 @@ class Repartition:
             total_production += row.prod_list[index_producer].initial_production
 
         # Compute auto_consumption rate
-        auto_consumption_rate = int(total_auto_consumption * 10000 / total_production) / 100
+        auto_consumption_rate = int(total_auto_consumption * 1000 / total_production) / 10
 
         return auto_consumption_rate
 
@@ -457,7 +546,7 @@ class Repartition:
             total_consumption += row.cons_list[index_consumer].consumption
 
         # Compute auto_production rate
-        auto_production_rate = int(total_auto_consumption * 10000 / total_consumption) / 100
+        auto_production_rate = int(total_auto_consumption * 1000 / total_consumption) / 10
 
         return auto_production_rate
 
@@ -479,7 +568,7 @@ class Repartition:
                 total_consumption += point.cons
 
         # Compute auto_production rate
-        global_auto_production_rate = int(total_auto_consumption * 10000 / total_consumption) / 100
+        global_auto_production_rate = int(total_auto_consumption * 1000 / total_consumption) / 10
 
         return global_auto_production_rate
 
@@ -500,6 +589,6 @@ class Repartition:
                 total_consumption += point.cons
 
         # Compute coverage rate
-        coverage_rate = int(total_production * 10000 / total_consumption) / 100
+        coverage_rate = int(total_production * 1000 / total_consumption) / 10
 
         return coverage_rate
