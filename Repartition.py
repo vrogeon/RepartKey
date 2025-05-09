@@ -112,6 +112,43 @@ class Repartition:
                 active = True
         return active
 
+    def calculate_rep_key_dynamic(self, point):
+
+        # First iterate on each consumer to compute global consumption
+        global_consumption = 0
+        for cons in point.cons_list:
+            global_consumption += cons.consumption
+
+        # Then iterate on each production to compute global production
+        global_production = 0
+        for prod in point.prod_list:
+            global_production += prod.production
+
+        # Compute ratio between global_consumption and global production
+        # Limit value to 1 to not exceed the consumption
+        ratio_conso_prod = 0
+        if global_consumption > global_production:
+            ratio_conso_prod = 1
+        else:
+            ratio_conso_prod = global_consumption / global_production
+
+        # Iterate on each consumer to set the key and corresponding auto_consumption
+        for cons in point.cons_list:
+            for param, prod in zip(cons.param_list, point.prod_list):
+                param.key = cons.consumption / global_consumption
+                param.auto_consumption = prod.production * param.key * ratio_conso_prod
+
+        for cons in point.cons_list:
+            index_param = 0
+            for param in cons.param_list:
+                # self.count += 1
+                # print('count = ', self.count)
+
+                # Use floor function to round to lower value.
+                # This ensures that sum of all keys does not exceed 100%
+                param.key = math.floor(param.auto_consumption * 1000 / point.prod_list[index_param].initial_production) / 10
+                index_param += 1
+
     # Function to calculate repartition keys
     def calculate_rep_key(self, current_priority, point):
 
@@ -282,7 +319,8 @@ class Repartition:
             # Compute repartition keys only if production is not null
             if prod_slot.prod != 0:
             # self.count = 0
-                self.calculate_rep_key(0, self.point_list[i])
+            #     self.calculate_rep_key(0, self.point_list[i])
+                self.calculate_rep_key_dynamic(self.point_list[i])
             i += 1
 
     # This function create files for repartition keys
@@ -350,15 +388,30 @@ class Repartition:
                 # Add first line with name of consumers
                 first_line = []
                 first_line.append('Horodate')
-                first_line.append(prod.name + '_production')
+                first_line.append(prod.name)
                 for cons in cons_list:
-                    first_line.append(cons.name + '_cons')
-                    first_line.append(cons.name + '_auto_cons')
-                    first_line.append(cons.name + '_auto_prod rate')
-
-                first_line.append('auto_cons rate')
-
+                    first_line.append(cons.name)
+                    first_line.append(cons.name)
+                    first_line.append("")
+                    first_line.append("")
+                    first_line.append("")
+                    first_line.append("")
                 keywriter.writerow(first_line)
+
+                second_line = []
+                second_line.append("")
+                second_line.append("")
+                for cons in cons_list:
+                    second_line.append('cons')
+                    second_line.append('cons_mois')
+                    second_line.append('auto_cons')
+                    second_line.append('auto_cons_mois')
+                    second_line.append('auto_prod rate')
+                    second_line.append('ratio')
+
+                second_line.append('auto_cons rate')
+
+                keywriter.writerow(second_line)
 
                 # Plot trends
                 plt.figure(figsize=(12, 6))
@@ -381,9 +434,11 @@ class Repartition:
                     for cons in row.cons_list:
                         row_key.append(str(cons.consumption).replace('.', ','))
                         # Use this line to print float with ',' instead of '.'
+                        row_key.append("")
                         auto_cons = row.prod_list[index_prod].initial_production * cons.param_list[index_prod].key
                         auto_cons = math.floor(auto_cons) / 100
                         row_key.append(str(auto_cons).replace('.', ','))
+                        row_key.append("")
                         # row_key.append(cons.param_list[index_prod].key)
 
                         # Add auto production rate
@@ -392,6 +447,7 @@ class Repartition:
                         else:
                             auto_prod_rate = 0
                         row_key.append(auto_prod_rate)
+                        row_key.append("")
 
                         # Multiply by 100 and force to int to prevent having float representation issues
                         total_auto_consumption += int(round(cons.param_list[index_prod].auto_consumption * 100))
@@ -438,7 +494,7 @@ class Repartition:
             total_production += row.prod_list[index_producer].initial_production
 
         # Compute auto_consumption rate
-        auto_consumption_rate = int(total_auto_consumption * 10000 / total_production) / 100
+        auto_consumption_rate = int(total_auto_consumption * 1000 / total_production) / 10
 
         return auto_consumption_rate
 
@@ -457,7 +513,7 @@ class Repartition:
             total_consumption += row.cons_list[index_consumer].consumption
 
         # Compute auto_production rate
-        auto_production_rate = int(total_auto_consumption * 10000 / total_consumption) / 100
+        auto_production_rate = int(total_auto_consumption * 1000 / total_consumption) / 10
 
         return auto_production_rate
 
@@ -479,7 +535,7 @@ class Repartition:
                 total_consumption += point.cons
 
         # Compute auto_production rate
-        global_auto_production_rate = int(total_auto_consumption * 10000 / total_consumption) / 100
+        global_auto_production_rate = int(total_auto_consumption * 1000 / total_consumption) / 10
 
         return global_auto_production_rate
 
@@ -500,6 +556,6 @@ class Repartition:
                 total_consumption += point.cons
 
         # Compute coverage rate
-        coverage_rate = int(total_production * 10000 / total_consumption) / 100
+        coverage_rate = int(total_production * 1000 / total_consumption) / 10
 
         return coverage_rate
