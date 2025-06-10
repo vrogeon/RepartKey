@@ -117,8 +117,12 @@ class Repartition:
         # Iterate on each consumer to set the key and corresponding auto_consumption
         for cons in point.cons_list:
             for param, prod in zip(cons.param_list, point.prod_list):
-                param.key = cons.consumption / global_consumption
-                param.auto_consumption = prod.production * param.key * ratio_conso_prod
+                if global_consumption != 0:
+                    param.key = cons.consumption / global_consumption
+                    param.auto_consumption = prod.production * param.key * ratio_conso_prod
+                else:
+                    param.key = 0
+                    param.auto_consumption = 0
 
         for cons in point.cons_list:
             for index_param, param in enumerate(cons.param_list):

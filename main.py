@@ -1,7 +1,6 @@
 import logging
 from logging import basicConfig
 import math
-
 import Consumer
 import Producer
 import Repartition
@@ -20,11 +19,15 @@ import Repartition
 # Create list of producers
 prod_list = []
 # prod_list.append(Producer.Producer('Prod2', 1234567901099))
-prod_list.append(Producer.Producer('Prod1', 1234567901000))
+#prod_list.append(Producer.Producer('Prod1', 1234567901000))
+prod_list.append(Producer.Producer('Prod1', 30002132191769))
 
 # prod_list[1].read_production('Courbe_charge_producteur2.txt')
 # prod_list[0].read_production('Simulation_AntonySoleil\\Simu_Prod.csv')
-prod_list[0].read_production('Releve_AntonySoleil\\Simu_Prod_Soli_75.csv')
+#prod_list[0].read_production('Releve_AntonySoleil\\Simu_Prod_Soli_75.csv')
+prod_list[0].read_production('Grand_cedre\\Simu_Prod_Grand_cedre.csv')
+
+prod_list[0].apply_factor(0.9)
 
 # Create list of consumers
 cons_list = []
@@ -40,15 +43,16 @@ cons_list = []
 # cons_list.append(Consumer.Consumer('PtiteEchoppe','PtiteEchoppe',                   [ 0 ], [ 27 ]))
 
 # cons_list.append(Consumer.Consumer('Parking_Harmony2','Parking_Harmony2',[ 0 ], [ 20 ]))
-cons_list.append(Consumer.Consumer('Habitat_Humanisme','Habitat_Humanisme',[ 0 ], [ 2 ]))
-cons_list.append(Consumer.Consumer('1ParvisDuBreuil','1ParvisDuBreuil', [ 0 ], [ 28 ]))
-cons_list.append(Consumer.Consumer('2ParvisDuBreuil','2ParvisDuBreuil', [ 0 ], [ 28 ]))
-cons_list.append(Consumer.Consumer('3ParvisDuBreuil','3ParvisDuBreuil', [ 0 ], [ 28 ]))
-cons_list.append(Consumer.Consumer('2ParvisDeLaBievre','2ParvisDeLaBievre', [ 0 ], [ 28 ]))
-cons_list.append(Consumer.Consumer('3ParvisDeLaBievre','3ParvisDeLaBievre', [ 0 ], [ 28 ]))
-cons_list.append(Consumer.Consumer('5ParvisDeLaBievre','5ParvisDeLaBievre', [ 0 ], [ 28 ]))
-cons_list.append(Consumer.Consumer('PtiteEchoppe','PtiteEchoppe',[ 0 ], [ 27 ]))
-cons_list.append(Consumer.Consumer('Azimut','Azimut',[ 0 ], [ 3 ]))
+# cons_list.append(Consumer.Consumer('Habitat_Humanisme','Habitat_Humanisme',[ 0 ], [ 2 ]))
+# cons_list.append(Consumer.Consumer('1ParvisDuBreuil','1ParvisDuBreuil', [ 0 ], [ 28 ]))
+# cons_list.append(Consumer.Consumer('2ParvisDuBreuil','2ParvisDuBreuil', [ 0 ], [ 28 ]))
+# cons_list.append(Consumer.Consumer('3ParvisDuBreuil','3ParvisDuBreuil', [ 0 ], [ 28 ]))
+# cons_list.append(Consumer.Consumer('2ParvisDeLaBievre','2ParvisDeLaBievre', [ 0 ], [ 28 ]))
+# cons_list.append(Consumer.Consumer('3ParvisDeLaBievre','3ParvisDeLaBievre', [ 0 ], [ 28 ]))
+# cons_list.append(Consumer.Consumer('5ParvisDeLaBievre','5ParvisDeLaBievre', [ 0 ], [ 28 ]))
+# cons_list.append(Consumer.Consumer('PtiteEchoppe','PtiteEchoppe',[ 0 ], [ 27 ]))
+# cons_list.append(Consumer.Consumer('Azimut','Azimut',[ 0 ], [ 3 ]))
+cons_list.append(Consumer.Consumer('Grand_cedre','Grand_cedre',[ 0 ], [ 100 ]))
 
 # cons_list[0].read_consumption('Simulation_AntonySoleil\\Simu_5Conso.csv')
 # cons_list[1].read_consumption('Simulation_AntonySoleil\\Simu_Azimut.csv')
@@ -58,15 +62,17 @@ cons_list.append(Consumer.Consumer('Azimut','Azimut',[ 0 ], [ 3 ]))
 # cons_list[5].read_consumption('Simulation_AntonySoleil\\Simu_PtiteEchoppe.csv')
 
 # cons_list[0].read_consumption('Releve_AntonySoleil\\Parking_Harmony2_Conso_202312_202412_V4.csv')
-cons_list[0].read_consumption('Releve_AntonySoleil\\Simu_5Conso.csv')
-cons_list[1].read_consumption('Releve_AntonySoleil\\1_1ParvisDuBreuil_PRM_30002130432283_V2.csv')
-cons_list[2].read_consumption('Releve_AntonySoleil\\2_2ParvisDuBreuil_PRM_30002130432722_V2.csv')
-cons_list[3].read_consumption('Releve_AntonySoleil\\3_3ParvisDuBreuil_PRM_30002130426648_V2.csv')
-cons_list[4].read_consumption('Releve_AntonySoleil\\1_1ParvisDuBreuil_PRM_30002130432283_V2.csv')
-cons_list[5].read_consumption('Releve_AntonySoleil\\2_2ParvisDuBreuil_PRM_30002130432722_V2.csv')
-cons_list[6].read_consumption('Releve_AntonySoleil\\3_3ParvisDuBreuil_PRM_30002130426648_V2.csv')
-cons_list[7].read_consumption('Releve_AntonySoleil\\Simu_PtiteEchoppe.csv')
-cons_list[8].read_consumption('Releve_AntonySoleil\\Simu_Azimut.csv')
+# cons_list[0].read_consumption('Releve_AntonySoleil\\Simu_5Conso.csv')
+# cons_list[1].read_consumption('Releve_AntonySoleil\\1_1ParvisDuBreuil_PRM_30002130432283_V2.csv')
+# cons_list[2].read_consumption('Releve_AntonySoleil\\2_2ParvisDuBreuil_PRM_30002130432722_V2.csv')
+# cons_list[3].read_consumption('Releve_AntonySoleil\\3_3ParvisDuBreuil_PRM_30002130426648_V2.csv')
+# cons_list[4].read_consumption('Releve_AntonySoleil\\1_1ParvisDuBreuil_PRM_30002130432283_V2.csv')
+# cons_list[5].read_consumption('Releve_AntonySoleil\\2_2ParvisDuBreuil_PRM_30002130432722_V2.csv')
+# cons_list[6].read_consumption('Releve_AntonySoleil\\3_3ParvisDuBreuil_PRM_30002130426648_V2.csv')
+# cons_list[7].read_consumption('Releve_AntonySoleil\\Simu_PtiteEchoppe.csv')
+# cons_list[8].read_consumption('Releve_AntonySoleil\\Simu_Azimut.csv')
+
+cons_list[0].read_consumption('Grand_cedre\\Conso_2022_30002132191769_2.csv')
 
 # Calculate repartition keys
 rep = Repartition.Repartition('Novembre')

@@ -30,3 +30,8 @@ class Producer:
                 # print(row)
             print('Producer file read!')
 
+    # This function apply a factor to the initial production.
+    # This is useful to get statistic with lower production
+    def apply_factor(self, factor):
+        for point in self.point_list:
+            point.prod *= factor
