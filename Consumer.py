@@ -12,7 +12,7 @@ class Consumer:
             # Consumer consumption for the slot
             self.cons = cons
 
-    def __init__(self, name, prm, priority_list, ratio_list):
+    def __init__(self, name, prm, priority_list, ratio_list, file = None):
         self.name = name
         # Point Reference Mesure: uniquely identify the consumer
         self.prm = prm
@@ -22,6 +22,8 @@ class Consumer:
         self.ratio_list = ratio_list
         # List of points for each slot of 15 min
         self.point_list = []
+        if file is not None:
+            self.read_consumption(file)
 
     # This function reads a file to set consumption values
     def read_consumption(self, file):

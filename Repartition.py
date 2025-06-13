@@ -11,6 +11,20 @@ from datetime import datetime
 # logger = logging.getLogger(__name__)
 # logger.setLevel(logging.DEBUG)
 
+# The following class defines the strategy to compute repartition keys
+class Strategy:
+    # DYNAMIC_BY_DEFAULT compute repartition keys based on consumption value of each consumers
+    # This is the strategy used by default by ENEDIS at the time of writing
+    DYNAMIC_BY_DEFAULT = 1
+    # DYNAMIC compute repartition keys based on priority and ratio defined for each customer
+    # It is also optimized to dispatch remaining consumption (when there is) to the consumers
+    # that still have consumption after applying priority and ratio.
+    # This allow to limit waste of production and to have the same efficiency as  DYNAMIC_BY_DEFAULT
+    DYNAMIC = 2
+    # STATIC compute using static ration. Due to low efficiency it is not implemented yet.
+    # MAy be implemented later for study purpose
+    STATIC = 3
+
 
 # The following class describes the different states a consumer can have
 class State:
@@ -94,7 +108,7 @@ class Repartition:
                 active = True
         return active
 
-    def calculate_rep_key_dynamic(self, point):
+    def calculate_rep_key_dynamic_by_default(self, point):
 
         # First iterate on each consumer to compute global consumption
         global_consumption = 0
@@ -131,7 +145,7 @@ class Repartition:
                 param.key = math.floor(param.auto_consumption * 1000 / point.prod_list[index_param].initial_production) / 10
 
     # Function to calculate repartition keys
-    def calculate_rep_key(self, current_priority, point):
+    def calculate_rep_key_dynamic(self, current_priority, point):
 
         # self.count += 1
         # print('count = ', self.count)
@@ -236,7 +250,7 @@ class Repartition:
                         index_param += 1
 
             # Call again the function
-            self.calculate_rep_key(current_priority, point)
+            self.calculate_rep_key_dynamic(current_priority, point)
 
         # Reactivate consumer for next iteration
         if not self.are_consumers_active(point):
@@ -248,7 +262,7 @@ class Repartition:
             # increase priority
             current_priority += 1
             # Call again the function
-            self.calculate_rep_key(current_priority, point)
+            self.calculate_rep_key_dynamic(current_priority, point)
 
         # Compute final ratio for each consumer
         for cons in point.cons_list:
@@ -258,7 +272,7 @@ class Repartition:
                 param.key = math.floor(param.auto_consumption * 1000 / point.prod_list[index_param].initial_production) / 10
 
     # Function to build repartition
-    def build_rep(self, prod_list, cons_list):
+    def build_rep(self, prod_list, cons_list, type):
 
         # First get list of prm
         self.add_prm(cons_list)
@@ -289,7 +303,12 @@ class Repartition:
 
             # Compute repartition keys only if production is not null
             if prod_slot.prod != 0:
-                self.calculate_rep_key_dynamic(self.point_list[i])
+                if type == Strategy.DYNAMIC_BY_DEFAULT:
+                    self.calculate_rep_key_dynamic_by_default(self.point_list[i])
+                elif type == Strategy.DYNAMIC:
+                    self.calculate_rep_key_dynamic(0, self.point_list[i])
+                else:
+                    self.calculate_rep_key_dynamic(0, self.point_list[i])
 
     # This function create files for repartition keys
     def write_repartition_key(self, prod_list, cons_list):

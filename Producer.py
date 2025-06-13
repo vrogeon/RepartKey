@@ -13,12 +13,14 @@ class Producer:
             # Consumer consumption for the slot
             self.prod = prod
             
-    def __init__(self, name, prm):
+    def __init__(self, name, prm, file = None):
         self.name = name
         # Point Reference Mesure: uniquely identify the producer
         self.prm = prm
         # List of points for each slot of 15 min
         self.point_list = []
+        if file is not None:
+            self.read_production(file)
 
     # This function reads a file to set production values
     def read_production(self, file):
