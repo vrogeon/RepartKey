@@ -311,7 +311,7 @@ class Repartition:
                     self.calculate_rep_key_dynamic(0, self.point_list[i])
 
     # This function create files for repartition keys
-    def write_repartition_key(self, prod_list, cons_list):
+    def write_repartition_key(self, prod_list, cons_list, debug_info = False):
         for index_prod, prod in enumerate(prod_list):
             file = str(prod.prm) + '.csv'
             with open(file, 'w', newline='') as csvfile:
@@ -323,11 +323,17 @@ class Repartition:
                 for prm in self.prm_list:
                     first_line.append(str(prm))
 
-                # Start the debug information at the second line
-                line_for_debug_info = 1
-                first_line.append('TOTAL')
-                first_line.append('=NB.SI(F2:F2881;"NOK")')
-                line_for_debug_info += 1
+                if debug_info:
+                    # Start the debug information at the second line
+                    line_for_debug_info = 1
+                    first_line.append('TOTAL')
+
+                    # Compute the letter of column based on number of consumers
+                    # Add number of consumers + 2 columns  (Horodate and TOTAL)
+                    column_letter = 'A'
+                    column_letter = ord(column_letter[0]) + len(self.prm_list) + 2
+                    first_line.append('=NB.SI('+chr(column_letter)+'2:'+chr(column_letter)+'2881;"NOK")')
+                    line_for_debug_info += 1
 
                 keywriter.writerow(first_line)
 
@@ -342,19 +348,21 @@ class Repartition:
                         row_key.append(str(cons.param_list[index_prod].key).replace('.', ','))
                         # row_key.append(cons.param_list[index_prod].key)
 
-                    # Add check information for excel
-                    line = '=SOMME('
-                    excel_column_number = 'A'
-                    excel_column_number = ord(excel_column_number[0])
-                    for cons in cons_list:
-                        excel_column_number += 1
-                        line += 'SUBSTITUE('+chr(excel_column_number)+str(line_for_debug_info)+';".";",");'
-                    line = line[:-1]
-                    line = line + ')'
-                    row_key.append(line)
-                    line = '=SI(E'+str(line_for_debug_info)+'>100;"NOK";"")'
-                    row_key.append(line)
-                    line_for_debug_info += 1
+                    if debug_info:
+                        # Add check information for excel
+                        line = '=SOMME('
+                        excel_column_number = 'A'
+                        excel_column_number = ord(excel_column_number[0])
+                        for cons in cons_list:
+                            excel_column_number += 1
+                            line += 'SUBSTITUE('+chr(excel_column_number)+str(line_for_debug_info)+';".";",");'
+                        excel_column_number +=1
+                        line = line[:-1]
+                        line = line + ')'
+                        row_key.append(line)
+                        line = '=SI('+chr(excel_column_number)+str(line_for_debug_info)+'>100;"NOK";"")'
+                        row_key.append(line)
+                        line_for_debug_info += 1
 
                     keywriter.writerow(row_key)
 
@@ -371,7 +379,12 @@ class Repartition:
         return month
 
     # This function creates file with statistics (auto-consumption and auto-production)
-    def generate_statistics(self, prod_list, cons_list):
+    def generate_statistics(self,
+                            prod_list,
+                            cons_list,
+                            add_cons = False,
+                            add_auto_cons = True,
+                            add_auto_prod_rate = False):
         for index_prod, prod in enumerate(prod_list):
             file = str(prod.prm) + '_statistics.csv'
             with open(file, 'w', newline='') as csvfile:
@@ -382,56 +395,50 @@ class Repartition:
                 first_line.append('Horodate')
                 first_line.append(prod.name)
                 for cons in cons_list:
-                    first_line.append(cons.name)
-                    first_line.append(cons.name)
-                    first_line.append("")
-                    first_line.append("")
-                    first_line.append("")
-                    first_line.append("")
+                    if add_cons: first_line.append(cons.name + "\ncons")
+                    if add_auto_cons: first_line.append(cons.name + "\nauto_cons")
+                    if add_auto_prod_rate: first_line.append(cons.name + "\nauto_prod_rate")
+                first_line.append("auto_cons_rate")
                 keywriter.writerow(first_line)
 
-                second_line = []
-                second_line.append("")
-                second_line.append("")
-                for cons in cons_list:
-                    second_line.append('cons')
-                    second_line.append('cons_mois')
-                    second_line.append('auto_cons')
-                    second_line.append('auto_cons_mois')
-                    second_line.append('auto_prod rate')
-                    second_line.append('ratio')
-
-                second_line.append('auto_cons rate')
-
-                keywriter.writerow(second_line)
+                # second_line = []
+                # second_line.append("")
+                # second_line.append("")
+                # for cons in cons_list:
+                #     second_line.append('cons')
+                #     second_line.append('auto_cons')
+                #     #second_line.append('auto_prod_rate')
+                #
+                # second_line.append('auto_cons rate')
+                #
+                # keywriter.writerow(second_line)
 
                 # Iterate on each point
                 for row in self.point_list:
                     # First add information of time slot
                     row_key = []
                     row_key.append(row.slot)
-                    row_key.append(str(row.prod_list[index_prod].initial_production).replace('.', ','))
+                    row_key.append(str(row.prod_list[index_prod].initial_production))
 
                     total_auto_consumption = 0
 
                     # Then add key for each consumer
                     for cons in row.cons_list:
-                        row_key.append(str(cons.consumption).replace('.', ','))
-                        # Use this line to print float with ',' instead of '.'
-                        row_key.append("")
-                        auto_cons = row.prod_list[index_prod].initial_production * cons.param_list[index_prod].key
-                        auto_cons = math.floor(auto_cons) / 100
-                        row_key.append(str(auto_cons).replace('.', ','))
-                        row_key.append("")
-                        # row_key.append(cons.param_list[index_prod].key)
+                        if add_cons:
+                            row_key.append(str(cons.consumption).replace('.', ','))
 
-                        # Add auto production rate
-                        if (cons.consumption != 0):
-                            auto_prod_rate = str(int(auto_cons * 100 / cons.consumption)).replace('.', ',')
-                        else:
-                            auto_prod_rate = 0
-                        row_key.append(auto_prod_rate)
-                        row_key.append("")
+                        if add_auto_cons:
+                            auto_cons = row.prod_list[index_prod].initial_production * cons.param_list[index_prod].key
+                            auto_cons = math.floor(auto_cons) / 100
+                            row_key.append(str(auto_cons).replace('.', ','))
+                            # row_key.append(cons.param_list[index_prod].key)
+
+                        if add_auto_prod_rate:
+                            if (cons.consumption != 0):
+                                auto_prod_rate = str(int(auto_cons * 100 / cons.consumption)).replace('.', ',')
+                            else:
+                                auto_prod_rate = 0
+                            row_key.append(auto_prod_rate)
 
                         # Multiply by 100 and force to int to prevent having float representation issues
                         total_auto_consumption += int(round(cons.param_list[index_prod].auto_consumption * 100))
@@ -519,7 +526,7 @@ class Repartition:
                             ratio = int(auto_cons_month[cons_index] * 10000 / cons_month[cons_index]) / 100
                             row_key.append(str(ratio).replace('.', ','))
 
-                            auto_cons_kwh = auto_cons_month[cons_index] / 1000
+                            auto_cons_kwh = int(auto_cons_month[cons_index] / 1000)
                             row_key.append(str(auto_cons_kwh).replace('.', ','))
 
                         # Reinitialize lists
