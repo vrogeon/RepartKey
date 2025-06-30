@@ -401,18 +401,6 @@ class Repartition:
                 first_line.append("auto_cons_rate")
                 keywriter.writerow(first_line)
 
-                # second_line = []
-                # second_line.append("")
-                # second_line.append("")
-                # for cons in cons_list:
-                #     second_line.append('cons')
-                #     second_line.append('auto_cons')
-                #     #second_line.append('auto_prod_rate')
-                #
-                # second_line.append('auto_cons rate')
-                #
-                # keywriter.writerow(second_line)
-
                 # Iterate on each point
                 for row in self.point_list:
                     # First add information of time slot
@@ -456,7 +444,12 @@ class Repartition:
                 print('File for statistics generated')
 
     # Function used to generate monthly report
-    def generate_monthly_report(self, prod_list, cons_list):
+    def generate_monthly_report(self,
+                                prod_list,
+                                cons_list,
+                                add_cons_mois = True,
+                                add_auto_prod_rate = True,
+                                add_auto_cons_mois = True):
         for index_prod, prod in enumerate(prod_list):
             file = str(prod.prm) + '_monthly_report.csv'
             with open(file, 'w', newline='') as csvfile:
@@ -465,22 +458,12 @@ class Repartition:
                 # Add first line with name of consumers
                 first_line = []
                 first_line.append('Horodate')
-                first_line.append(prod.name)
+                first_line.append(prod.name + '\n prod')
                 for cons in cons_list:
-                    first_line.append(cons.name)
-                    first_line.append("")
-                    first_line.append("")
+                    if add_cons_mois: first_line.append(cons.name + '\ncons_mois')
+                    if add_auto_prod_rate: first_line.append(cons.name + '\nauto_prod_rate')
+                    if add_auto_cons_mois: first_line.append(cons.name + '\nauto_cons_mois')
                 keywriter.writerow(first_line)
-
-                second_line = []
-                second_line.append("")
-                second_line.append("")
-                for cons in cons_list:
-                    second_line.append('cons_mois')
-                    second_line.append('ratio')
-                    second_line.append('auto_cons_mois')
-
-                keywriter.writerow(second_line)
 
                 # Get first month
                 current_month = self.get_month(self.point_list[0].slot)
@@ -521,13 +504,16 @@ class Repartition:
 
                         for cons_index, cons in enumerate(row.cons_list):
                             cons_kwh = int(cons_month[cons_index] / 1000)
-                            row_key.append(str(cons_kwh).replace('.', ','))
+                            if add_cons_mois:
+                                row_key.append(str(cons_kwh).replace('.', ','))
 
                             ratio = int(auto_cons_month[cons_index] * 10000 / cons_month[cons_index]) / 100
-                            row_key.append(str(ratio).replace('.', ','))
+                            if add_auto_prod_rate:
+                                row_key.append(str(ratio).replace('.', ','))
 
                             auto_cons_kwh = int(auto_cons_month[cons_index] / 1000)
-                            row_key.append(str(auto_cons_kwh).replace('.', ','))
+                            if add_auto_cons_mois:
+                                row_key.append(str(auto_cons_kwh).replace('.', ','))
 
                         # Reinitialize lists
                         prod_month = 0
