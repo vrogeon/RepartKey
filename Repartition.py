@@ -2,8 +2,6 @@
 import csv
 import logging
 import math
-from ast import Param
-from tkinter.constants import ACTIVE
 
 from datetime import datetime
 

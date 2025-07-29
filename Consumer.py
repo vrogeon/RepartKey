@@ -31,7 +31,10 @@ class Consumer:
             next(csvfile) # Skip first line of the file which contains title
             cons_file = csv.reader(csvfile,delimiter=';')
             for row in cons_file:
-                self.point_list.append(Consumer.Point(row[0], float(row[1].replace(',','.'))))
+                try:
+                    self.point_list.append(Consumer.Point(row[0], float(row[1].replace(',','.'))))
+                except ValueError as e:
+                    print('Erreur')
                 #print(row)
             print('Consumer file read!')
 
