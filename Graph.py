@@ -81,5 +81,31 @@ def generate_graph(file,
                   title='Profil d\'autoconsommation par consommateur',
                   labels={'Horodate': 'Date', 'auto_cons': 'Autoconsommation (kWh)'})
 
+    if resolution == 'day':
+        fig.update_xaxes(
+            range=['1900-01-01', '1900-12-31'],
+            dtick='M1',  # Un trait par mois
+            tickformat='%d %B',  # Format d'affichage des dates
+            minor=dict(
+                dtick='D1',  # Traits mineurs tous les jours
+                showgrid=True,  # Afficher le quadrillage mineur
+                gridcolor='lightgray',  # Couleur du quadrillage des jours
+                gridwidth=0.5,  # Épaisseur des lignes de quadrillage
+            )
+        )
+    else:
+        fig.update_xaxes(
+            range=['1900-01-01', '1900-12-31'],
+            dtick='M1',  # Un trait par mois
+            tickformat='%B'  # Format d'affichage des dates
+        )
+
+    # Optionnel : personnaliser le quadrillage principal (mois)
+    fig.update_xaxes(
+        showgrid=True,
+        gridcolor='gray',
+        gridwidth=1
+    )
+
     fig.show()
 
