@@ -9,6 +9,8 @@ from datetime import datetime
 # logger = logging.getLogger(__name__)
 # logger.setLevel(logging.DEBUG)
 
+EXPORT_FOLDER = 'Export\\'
+
 # The following class defines the strategy to compute repartition keys
 class Strategy:
     # DYNAMIC_BY_DEFAULT compute repartition keys based on consumption value of each consumers
@@ -311,7 +313,7 @@ class Repartition:
     # This function create files for repartition keys
     def write_repartition_key(self, prod_list, cons_list, debug_info = False):
         for index_prod, prod in enumerate(prod_list):
-            file = str(prod.prm) + '.csv'
+            file = EXPORT_FOLDER + str(prod.prm) + '.csv'
             with open(file, 'w', newline='') as csvfile:
                 keywriter = csv.writer(csvfile,delimiter=';')
 
@@ -384,7 +386,7 @@ class Repartition:
                             add_auto_cons = True,
                             add_auto_prod_rate = False):
         for index_prod, prod in enumerate(prod_list):
-            file = str(prod.prm) + '_statistics.csv'
+            file = EXPORT_FOLDER + str(prod.prm) + '_statistics.csv'
             with open(file, 'w', newline='') as csvfile:
                 keywriter = csv.writer(csvfile,delimiter=';')
 
@@ -449,7 +451,7 @@ class Repartition:
                                 add_auto_prod_rate = True,
                                 add_auto_cons_mois = True):
         for index_prod, prod in enumerate(prod_list):
-            file = str(prod.prm) + '_monthly_report.csv'
+            file = EXPORT_FOLDER + str(prod.prm) + '_monthly_report.csv'
             with open(file, 'w', newline='') as csvfile:
                 keywriter = csv.writer(csvfile,delimiter=';')
 
